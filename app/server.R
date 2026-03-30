@@ -96,16 +96,14 @@ shinyServer(function(input, output, session) {
     login_state$username  <- NULL
   })
 
-  # Input csvFileServer Module for MDR-hvKp dataSet
-    dataframe <- csvFileServer("MDR_hvKp_dataSet")
+  # Pre-loaded datasets (from global.R)
+  dataframe <- reactive({ app_data })
+  metadata  <- reactive({ app_metadata })
 
-    # Input csvFileServer Module for Metadata
-    metadata <- csvFileServer("MetadataSet")
-  # 
-  # # Input MDRdataPlotServer Module for MDR-hvKp dataSet
+  # MDR plot module — serves both Report and Explorer tabs
   filter_data <- MDRdataPlotServer("MDR_hvKp_dataPlot", dataframe = dataframe, metadata = metadata)
-  # 
-  # # input MDRdataStatsServer Module for MDR-hvKp dataSet
+
+  # Stats module
   dataStatsServer("hosMicro_dataStat", filter_data = filter_data)
   
   

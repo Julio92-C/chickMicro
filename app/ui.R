@@ -239,25 +239,18 @@ dashboardPage(
               )
             ),
 
-            # --- Data tab ---
+            # --- Report tab ---
             tabPanel(
-              title = tagList(icon("upload"), " Data"),
+              title = tagList(icon("chart-line"), " Report"),
               br(),
-              csvFileUI("MDR_hvKp_dataSet")
+              MDRreportUI("MDR_hvKp_dataPlot")
             ),
 
-            # --- Metadata tab ---
+            # --- Explorer tab ---
             tabPanel(
-              title = tagList(icon("tags"), " Metadata"),
+              title = tagList(icon("filter"), " Explorer"),
               br(),
-              csvFileUI("MetadataSet")
-            ),
-
-            # --- Plot tab ---
-            tabPanel(
-              title = tagList(icon("chart-bar"), " Plot"),
-              br(),
-              MDRdataPlotUI("MDR_hvKp_dataPlot")
+              MDRexplorerUI("MDR_hvKp_dataPlot")
             ),
 
             # --- Stats tab ---
