@@ -108,24 +108,6 @@ MDRreportUI <- function(id) {
               withSpinner(plotlyOutput(ns("PCoA_Analysis"), height = 420),
                           type = 6, color = "#1a73b8")
             )
-          ),
-          fluidRow(
-            column(3,
-              box(
-                width = 12, solidHeader = TRUE, status = "black", background = "gray",
-                title = tagList(icon("sliders"), " Heatmap Controls"),
-                sliderInput(ns("row_count"), "Row range:",
-                            min = 1, max = 226, value = c(1, 50))
-              )
-            ),
-            column(9,
-              box(
-                width = 12, solidHeader = TRUE, status = "navy",
-                title = tagList(icon("table-cells"), " Gut Microbiome Profile Heatmap"),
-                withSpinner(plotOutput(ns("Gut_microbiome"), height = 700),
-                            type = 6, color = "#1a73b8")
-              )
-            )
           )
         ),
 
@@ -246,6 +228,30 @@ MDRexplorerUI <- function(id) {
                     plotOutput(ns("GeneticsElements_SAMPLE"), height = 420)
                   )
                 )
+              )
+            ),
+
+            tabPanel(
+              title = tagList(icon("table-cells"), " Gut Microbiome"),
+              fluidRow(
+                column(4,
+                  box(
+                    width = 12, solidHeader = TRUE, status = "black", background = "gray",
+                    title = tagList(icon("sliders"), " Heatmap Controls"),
+                    sliderInput(ns("row_count"), "Row range:",
+                                min = 1, max = 226, value = c(1, 50))
+                  )
+                ),
+                column(8,
+                  tags$p(style = "font-size: 12px; color: #777; padding: 6px 0;",
+                    icon("info-circle"),
+                    " Heatmap reflects the current filter selection. Click Plot to update."
+                  )
+                )
+              ),
+              fluidRow(
+                withSpinner(plotOutput(ns("Gut_microbiome"), height = 750),
+                            type = 6, color = "#1a73b8")
               )
             )
 
@@ -855,9 +861,13 @@ MDRdataPlotServer <- function(id, dataframe, metadata){
       }, bg.border = NA)
     })
 
-    # Gut microbiome heatmap
+    # Gut microbiome heatmap (reactive — uses filter_data)
     output$Gut_microbiome <- renderPlot({
-      abri_kraken2_merged <- merge(dataframe(), metadata(), by = "SAMPLE")
+      validate(
+        need(!is.null(filter_data()), "Run a filter first — set your thresholds and click Plot."),
+        need(nrow(filter_data()) > 0,  "No data after current filters.")
+      )
+      abri_kraken2_merged <- merge(filter_data(), metadata(), by = "SAMPLE")
       abri_kraken2_clean  <- abri_kraken2_merged %>%
         filter(!(str_count(NAME, "\\S+") == 1 & NAME != "Enterococcus"))
 
