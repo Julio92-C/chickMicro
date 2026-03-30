@@ -971,8 +971,17 @@ MDRdataPlotServer <- function(id, dataframe, metadata){
         VFs       = c(`Virulent` = "#fce5d2",        `Hypervirulent` = "#c47a02")
       )
 
+      # Update slider to match the actual number of rows after filtering
+      n_rows <- nrow(sorted_matrix)
+      updateSliderInput(session, "row_count",
+                        max   = n_rows,
+                        value = c(1, min(input$row_count[2], n_rows)))
+
+      row_start <- max(1, min(input$row_count[1], n_rows))
+      row_end   <- max(1, min(input$row_count[2], n_rows))
+
       tryCatch({
-        pheatmap(sorted_matrix[input$row_count[1]:input$row_count[2], ],
+        pheatmap(sorted_matrix[row_start:row_end, ],
                  display_numbers = FALSE, cluster_cols = TRUE, cluster_rows = FALSE,
                  scale = "none", clustering_callback = callback,
                  border_color = "NA", color = c("#CCCCCCFF", "#666666FF"),
