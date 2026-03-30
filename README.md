@@ -16,10 +16,6 @@ The app allows users to:
 
 The dataset comprises broiler chicken gut samples across three dietary treatment groups: **Reference diet**, **Soyabean meal**, and **Seaweed**.
 
-## Live App
-
-[https://julio92-c.shinyapps.io/hosMicro/](https://julio92-c.shinyapps.io/hosMicro/)
-
 ## Running the App
 
 ```r
