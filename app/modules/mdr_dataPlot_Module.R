@@ -114,78 +114,59 @@ MDRdataPlotUI <- function(id) {
                       
                       tabPanel("Taxa Distribution",
                                fluidRow(
-                                 
-                                   plotlyOutput(ns("freq_plot"), height = 500)
-                                 
+                                 withSpinner(plotlyOutput(ns("freq_plot"), height = 500),
+                                            type = 6, color = "#1a73b8")
                                ),
-                               
+
                                fluidRow(
+                                 column(4),
                                  column(4,
-                                        
+                                   selectInput(ns("mainVar_freq"),
+                                               label = "Choose a genotype:",
+                                               choices = c("NAME", "GENE"),
+                                               selected = "NAME",
+                                               multiple = FALSE)
                                  ),
-                                 column(4,
-                                       selectInput(ns("mainVar_freq"),
-                                                   label = "Choose a genotype:",
-                                                   choices = c("NAME", "GENE"),
-                                                   selected = "NAME",
-                                                   multiple = FALSE,
-                                       )
-                                 ),
-                                 
-                                 column(4,
-                                   
-                                 )
+                                 column(4)
                                ),
-                               
+
                                fluidRow(
-                                 column(2,
-                                        
-                                 ),
+                                 column(2),
                                  column(8,
-                                        plotOutput(ns("taxaCount_violinPlot"), height = 500),
+                                   tags$div(style = "text-align:right; margin-bottom:4px;",
+                                     downloadButton(ns("dl_taxaViolin"), "PNG",
+                                                    icon = icon("download"), class = "btn-xs btn-default")
+                                   ),
+                                   withSpinner(plotOutput(ns("taxaCount_violinPlot"), height = 500),
+                                               type = 6, color = "#1a73b8")
                                  ),
-                                 column(2,
-                                        
-                                 ),
+                                 column(2)
                                ),
-                               
-                               
-                               
-                               
+
+
+
+
                       ),
                       
                       
                       tabPanel("Relative Abundance",
                                fluidRow(
-                                 plotlyOutput(ns("Relative_abundance"), height = 500)
+                                 withSpinner(plotlyOutput(ns("Relative_abundance"), height = 500),
+                                            type = 6, color = "#1a73b8")
                                ),
-                               
+
                                fluidRow(
-                                  column(2,
-                                         
-                                  ),
-                                  column(8,
-                                         h4("")
-                                  ),
-                                  column(2,
-                                         
-                                  ),
-                                 ),
-                               
-                               fluidRow(
-                                 column(2,
-                                        
-                                 ),
+                                 column(2),
                                  column(8,
-                                        plotOutput(ns("taxaCount_VennDiagram"), height = 600, width = 600)
+                                   tags$div(style = "text-align:right; margin-bottom:4px;",
+                                     downloadButton(ns("dl_taxaVenn"), "PNG",
+                                                    icon = icon("download"), class = "btn-xs btn-default")
+                                   ),
+                                   withSpinner(plotOutput(ns("taxaCount_VennDiagram"), height = 600, width = 600),
+                                               type = 6, color = "#1a73b8")
                                  ),
-                                 column(2,
-                                        
-                                 ),
-                                 
-                                 
+                                 column(2)
                                )
-                               
                       ),
                       
                       
@@ -335,13 +316,91 @@ MDRdataPlotServer <- function(id, dataframe, metadata){
                        row_count = input$row_count)
         
 
-        rmarkdown::render("reports/shinyReport.Rmd", output_file = file, 
-                          params = params, 
+        rmarkdown::render("reports/shinyReport.Rmd", output_file = file,
+                          params = params,
                           envir = new.env(parent = globalenv())
                           )
       }
     )
-    
+
+    # Download taxa violin plot as PNG
+    output$dl_taxaViolin <- downloadHandler(
+      filename = function() paste0("taxa-violin-", Sys.Date(), ".png"),
+      content = function(file) {
+        abri_kraken2_merged <- merge(dataframe(), metadata(), by = "SAMPLE")
+        abri_kraken2_filtered <- abri_kraken2_merged %>%
+          arrange(TREATMENT) %>%
+          group_by(TREATMENT, NAME) %>%
+          summarise(Taxa_count = n(), .groups = "drop") %>%
+          ungroup() %>%
+          mutate(Taxa_log_count = log(Taxa_count + 1))
+        anova_result <- aov(Taxa_log_count ~ TREATMENT, data = abri_kraken2_filtered)
+        p <- ggplot(abri_kraken2_filtered, aes(x = TREATMENT, y = Taxa_log_count, fill = TREATMENT)) +
+          geom_violin(trim = FALSE, scale = "width") +
+          geom_boxplot(width = 0.1, position = position_dodge(0.9)) +
+          scale_fill_manual(values = c("Reference diet" = "#1f77b4",
+                                       "Seaweed" = "#2ca02c",
+                                       "Soyabean meal" = "#ff7f0e")) +
+          labs(x = "Treatment groups", y = "Log(Number of Taxa)") +
+          theme_classic() +
+          theme(legend.position = "none", text = element_text(size = 24)) +
+          annotate("text", x = 2, y = max(abri_kraken2_filtered$Taxa_log_count) + 1.3,
+                   label = paste("ANOVA p =", format(summary(anova_result)[[1]][["Pr(>F)"]][1], digits = 2)),
+                   size = 5, color = "black")
+        ggsave(file, plot = p, device = "png", width = 8, height = 6, dpi = 150)
+      }
+    )
+
+    # Download Venn diagram as PNG
+    output$dl_taxaVenn <- downloadHandler(
+      filename = function() paste0("taxa-venn-", Sys.Date(), ".png"),
+      content = function(file) {
+        abri_kraken2_merged <- merge(dataframe(), metadata(), by = "SAMPLE")
+        Wheat_soyabean_dataset <- abri_kraken2_merged %>%
+          filter(TREATMENT == "Reference diet") %>%
+          distinct() %>%
+          rename(Wheat_soyabean = TREATMENT) %>%
+          select(TAXID, Wheat_soyabean)
+        Seaweed_dataset <- abri_kraken2_merged %>%
+          filter(TREATMENT == "Seaweed") %>%
+          distinct() %>%
+          rename(Seaweed = TREATMENT) %>%
+          select(TAXID, Seaweed)
+        Soyabean_meal_dataset <- abri_kraken2_merged %>%
+          filter(TREATMENT == "Soyabean meal") %>%
+          distinct() %>%
+          rename(Soyabean_meal = TREATMENT) %>%
+          select(TAXID, Soyabean_meal)
+        TREATMENT_dataset <- merge(Wheat_soyabean_dataset, Seaweed_dataset, by = "TAXID", all = TRUE)
+        TREATMENT_dataset1 <- merge(TREATMENT_dataset, Soyabean_meal_dataset, by = "TAXID", all = TRUE)
+        TREATMENT_dataset1 <- TREATMENT_dataset1 %>%
+          distinct(TAXID, .keep_all = TRUE) %>%
+          remove_rownames() %>%
+          column_to_rownames(var = "TAXID") %>%
+          mutate(across(everything(), ~ if_else(. == "", NA_character_, .))) %>%
+          filter(!if_all(everything(), is.na))
+        TREATMENT_dataset_matrix <- data.matrix(TREATMENT_dataset1, rownames.force = NA) %>%
+          replace(is.na(.), 0)
+        TREATMENT_dataset_matrix_Bmatrix <- as.matrix((TREATMENT_dataset_matrix > 0) + 0)
+        sets <- apply(TREATMENT_dataset_matrix_Bmatrix, 2, function(col) which(col == 1))
+        names(sets) <- colnames(TREATMENT_dataset_matrix_Bmatrix)
+        venn.plot <- venn.diagram(
+          x = sets,
+          category.names = c("Wheat soyabean", "Seaweed", "Soyabean meal"),
+          fill = c(Wheat_soyabean = "#c2320e", Seaweed = "#04540a", Soyabean_meal = "#c2980e"),
+          alpha = 0.3,
+          height = 50, width = 50,
+          filename = NULL,
+          cat.cex = 1.2,
+          cex = 2
+        )
+        png(file, width = 800, height = 800)
+        grid.newpage()
+        grid.draw(venn.plot)
+        dev.off()
+      }
+    )
+
     # Display an infoBox with general stats
     output$general_stats <- renderInfoBox({
       infoBox(
@@ -366,72 +425,70 @@ MDRdataPlotServer <- function(id, dataframe, metadata){
         distinct(NAME, GENE) %>%
         group_by(GENE) %>%
         arrange(GENE)
-      
+
       total_ARG_count <- length(unique(arg_data$GENE))
-     
-      
+      n_taxa <- length(unique(filter_data()$NAME))
+      pct <- if (n_taxa > 0) round(100 * total_ARG_count / n_taxa, 2) else 0
+
       valueBox(
-        value = paste0(total_ARG_count, "/",
-                       round(100 * total_ARG_count/length(unique(filter_data()$NAME)), 2), "%"),
+        value = paste0(total_ARG_count, "/", pct, "%"),
         subtitle = "Total Antimacrobial Resistance genes", icon("dna"),
         color = "purple"
       )
     })
-    
-    
-    
+
+
+
     output$VFs_count <- renderValueBox({
       vfs_data <- filter_data() %>%
         filter(DATABASE == "vfdb") %>%
         distinct(NAME, GENE) %>%
         group_by(GENE) %>%
         arrange(GENE)
-      
+
       total_VFs_count <- length(unique(vfs_data$GENE))
-      
-      
+      n_taxa <- length(unique(filter_data()$NAME))
+      pct <- if (n_taxa > 0) round(100 * total_VFs_count / n_taxa, 2) else 0
+
       valueBox(
-        value = paste0(total_VFs_count, "/",
-                       round(100 * total_VFs_count/length(unique(filter_data()$NAME)), 2), "%"),
+        value = paste0(total_VFs_count, "/", pct, "%"),
         subtitle = "Total Virulence Factors", icon("dna"),
         color = "purple"
       )
     })
-    
+
     output$MGEs_count <- renderValueBox({
       mges_data <- filter_data() %>%
         filter(DATABASE == "plasmidfinder") %>%
         distinct(NAME, GENE) %>%
         group_by(GENE) %>%
         arrange(GENE)
-      
+
       total_mges_count <- length(unique(mges_data$GENE))
-      
-      
+      n_taxa <- length(unique(filter_data()$NAME))
+      pct <- if (n_taxa > 0) round(100 * total_mges_count / n_taxa, 2) else 0
+
       valueBox(
-        value = paste0(total_mges_count, "/",
-                       round(100 * total_mges_count/length(unique(filter_data()$NAME)), 2), "%"),
+        value = paste0(total_mges_count, "/", pct, "%"),
         subtitle = "Total Mobile Genetic Elements", icon("dna"),
         color = "purple"
       )
     })
-    
+
     output$Drugs_count <- renderValueBox({
       drugs_data <- filter_data() %>%
         filter(DATABASE == "card") %>%
         separate_longer_delim(RESISTANCE, delim = ";") %>%
         distinct(GENE, RESISTANCE) %>%
         group_by(GENE) %>%
-        arrange(GENE) 
-         
-      # drugs_class <- drugs_data$RESISTANCE
-      # print(drugs_class)
-      
+        arrange(GENE)
+
       total_drugs_count <- length(unique(drugs_data$RESISTANCE))
-      
+      n_taxa <- length(unique(filter_data()$NAME))
+      pct <- if (n_taxa > 0) round(100 * total_drugs_count / n_taxa, 2) else 0
+
       valueBox(
-        value = paste0(total_drugs_count, "/",
-                       round(100 * total_drugs_count/length(unique(filter_data()$NAME)), 2), "%"),
+        value = paste0(total_drugs_count, "/", pct, "%"),
         subtitle = "Total Drug classes", icon("capsules"),
         color = "orange"
       )
@@ -713,8 +770,8 @@ MDRdataPlotServer <- function(id, dataframe, metadata){
          arrange(SAMPLE) %>%
          pivot_wider(names_from = DATABASE, values_from = GENE, values_fn = list) %>%
          group_by(NAME) %>%
-         summarise(across(15:17, ~ paste(na.omit(.), collapse = ", "))) %>%
-         mutate(across(2:4, ~ str_replace_all(., "(NuLL,|,NULL|,NULL,|NULL|, )", "")))
+         summarise(across(any_of(c("card", "vfdb", "plasmidfinder")), ~ paste(na.omit(.), collapse = ", "))) %>%
+         mutate(across(any_of(c("card", "vfdb", "plasmidfinder")), ~ str_replace_all(., "(NuLL,|,NULL|,NULL,|NULL|, )", "")))
        
        
        # Assign the values of NAMEs as row NAMEs
@@ -778,8 +835,8 @@ MDRdataPlotServer <- function(id, dataframe, metadata){
            arrange(SAMPLE) %>%
            pivot_wider(names_from = SAMPLE, values_from = c(NAME), values_fn = length) %>%
            group_by(GENE) %>%
-           summarise(across(2:19, ~ paste(., collapse = ", "))) %>%
-           mutate(across(2:19, ~ str_replace_all(., "(NA,|,NA|,NA,|NA|,| )", "")))
+           summarise(across(everything(), ~ paste(., collapse = ", "))) %>%
+           mutate(across(-GENE, ~ str_replace_all(., "(NA,|,NA|,NA,|NA|,| )", "")))
          
          # Assign the values of GENE as row NAMEs and empty rows as NA value
          df_wide_ann_rows <- df_wide_ann_rows %>%
@@ -1064,11 +1121,11 @@ MDRdataPlotServer <- function(id, dataframe, metadata){
         # Pivot the SAMPLE values into columns
         df_wide <- abri_kraken2_clean %>%
           arrange(SAMPLE) %>%
-          select(SAMPLE, TAXID, NAME, GENE, TREATMENT) %>%
-          pivot_wider(names_from = SAMPLE, values_from = c(TAXID), values_fn = length) %>%
+          select(SAMPLE, TAXID, NAME) %>%
+          pivot_wider(names_from = SAMPLE, values_from = TAXID, values_fn = length) %>%
           group_by(NAME) %>%
-          summarise(across(3:20, ~ paste(., collapse = ", "))) %>%
-          mutate(across(2:19, ~ str_replace_all(., "(NA,|,NA|,NA,|NA|,| )", "")))
+          summarise(across(everything(), ~ paste(., collapse = ", "))) %>%
+          mutate(across(-NAME, ~ str_replace_all(., "(NA,|,NA|,NA,|NA|,| )", "")))
         
         # colnames(df_wide)
         
@@ -1156,8 +1213,8 @@ MDRdataPlotServer <- function(id, dataframe, metadata){
           filter(grepl("card|vfdb|plasmidfinder", DATABASE)) %>%
           pivot_wider(names_from = DATABASE, values_from = GENE, values_fn = list) %>%
           group_by(NAME) %>%
-          summarise(across(16:18, ~ paste(., collapse = ", "))) %>%
-          mutate(across(2:4, ~ str_replace_all(., "(NULL,|,NULL|,NULL,|NULL| )", ""))) %>%
+          summarise(across(any_of(c("card", "vfdb", "plasmidfinder")), ~ paste(., collapse = ", "))) %>%
+          mutate(across(any_of(c("card", "vfdb", "plasmidfinder")), ~ str_replace_all(., "(NULL,|,NULL|,NULL,|NULL| )", ""))) %>%
           na.omit() %>%
           remove_rownames() %>%
           column_to_rownames(var = "NAME") %>%

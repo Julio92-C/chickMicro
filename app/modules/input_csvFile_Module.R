@@ -47,8 +47,8 @@ csvFileUI <- function(id) {
              box(width = 12,
                  solidHeader = TRUE,
                  status = "black",
-                 DT::dataTableOutput(ns("data"))
-             )  
+                 withSpinner(DT::dataTableOutput(ns("data")), type = 6, color = "#1a73b8")
+             )
          )
     )
    
@@ -58,7 +58,7 @@ csvFileUI <- function(id) {
 
 
 # Module server function
-csvFileServer <- function(id, obs_num) {
+csvFileServer <- function(id) {
   moduleServer(
     id,
     ## Below is the module function
@@ -73,8 +73,13 @@ csvFileServer <- function(id, obs_num) {
       
       # The user's data, parsed into a data frame
       dataframe <- reactive({
-         read.csv(userFile()$datapath, header=input$header, sep=input$sep, quote=input$quote)
-        
+        df <- read.csv(userFile()$datapath, header = input$header,
+                       sep = input$sep, quote = input$quote)
+        validate(
+          need(nrow(df) > 0, "The uploaded file is empty — please check your CSV."),
+          need(ncol(df) > 1, "The file has only one column. Check the separator setting.")
+        )
+        df
       })
       
       # We can run observers in here if we want to
