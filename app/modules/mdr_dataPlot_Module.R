@@ -297,7 +297,7 @@ MDRdataPlotServer <- function(id, dataframe, metadata){
     output$rpt_vfs <- renderValueBox({
       n <- dataframe() %>% filter(DATABASE == "vfdb") %>% distinct(GENE) %>% nrow()
       valueBox(value = n, subtitle = "Virulence Factors",
-               icon = icon("shield-virus"), color = "danger")
+               icon = icon("shield-virus"), color = "red")
     })
 
     output$rpt_mges <- renderValueBox({
