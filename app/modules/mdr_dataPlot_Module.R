@@ -975,10 +975,10 @@ MDRdataPlotServer <- function(id, dataframe, metadata){
       n_rows <- nrow(sorted_matrix)
       updateSliderInput(session, "row_count",
                         max   = n_rows,
-                        value = c(1, min(input$row_count[2], n_rows)))
+                        value = c(1, min(50, n_rows)))
 
       row_start <- max(1, min(input$row_count[1], n_rows))
-      row_end   <- max(1, min(input$row_count[2], n_rows))
+      row_end   <- max(min(50, n_rows), min(input$row_count[2], n_rows))
 
       tryCatch({
         pheatmap(sorted_matrix[row_start:row_end, ],
