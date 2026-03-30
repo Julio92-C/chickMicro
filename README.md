@@ -29,9 +29,11 @@ Or open `chickMicro/app/ui.R` in RStudio and click **Run App**.
 ## Contact
 
 **Julio C. Ortega Cambara**
+
 PhD Candidate — Computational Bioinformatics
-School of Biomedical Sciences
-University of West London
+
+School of Biomedical Sciences, University of West London
+
 St Mary's Rd, London W5 5RF
 
 Email: [32104617@student.uwl.ac.uk](mailto:32104617@student.uwl.ac.uk)
