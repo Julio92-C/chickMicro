@@ -134,7 +134,7 @@ MDRreportUI <- function(id) {
           condition = sprintf("input['%s'] == 'pathogens'", ns("rpt_section")),
           fluidRow(
             box(
-              width = 12, solidHeader = TRUE, status = "red",
+              width = 12, solidHeader = TRUE, status = "danger",
               title = tagList(icon("bacteria"), " Key Pathogens — AMR Chord Diagram"),
               div(style = "padding: 15px;",
                 withSpinner(plotOutput(ns("Key_Pathoges_AMR"), height = 800),
@@ -297,7 +297,7 @@ MDRdataPlotServer <- function(id, dataframe, metadata){
     output$rpt_vfs <- renderValueBox({
       n <- dataframe() %>% filter(DATABASE == "vfdb") %>% distinct(GENE) %>% nrow()
       valueBox(value = n, subtitle = "Virulence Factors",
-               icon = icon("shield-virus"), color = "red")
+               icon = icon("shield-virus"), color = "danger")
     })
 
     output$rpt_mges <- renderValueBox({
